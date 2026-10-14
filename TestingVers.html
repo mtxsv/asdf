@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b0b12">
+<title>Arcade</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b0b12;color:#f5f3ff;font-family:Segoe UI,Arial,sans-serif}
+header{padding:20px 7%;border-bottom:1px solid #272638;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:19px;font-weight:900;letter-spacing:3px}
+.logo span{color:#a78bfa}
+main{max-width:1100px;margin:auto;padding:45px 24px}
+.hero{padding:45px;border:1px solid #3a3158;border-radius:24px;background:radial-gradient(ellipse at 90% 20%,#7549c855,transparent 55%),linear-gradient(120deg,#211832,#12121d)}
+.tag{color:#75e5ff;text-transform:uppercase;letter-spacing:3px;font-size:11px;font-weight:bold}
+h1{font-size:clamp(32px,5vw,55px);margin:18px 0 12px;line-height:1.05}
+.hero p,.desc{color:#a7a5bb;line-height:1.7}
+.games{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin-top:25px}
+.card{overflow:hidden;background:#14141f;border:1px solid #29283b;border-radius:19px;transition:.2s}
+.card:hover{transform:translateY(-4px);border-color:#8065ce}
+.cover{height:190px;display:grid;place-items:center;font-size:76px}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#05050acc;backdrop-filter:blur(4px);z-index:100;padding:20px}
+.modal.show{display:flex}
+.modal-box{background:#14141f;border:1px solid #8065ce;border-radius:20px;padding:34px 38px;text-align:center;max-width:440px;width:100%;box-shadow:0 20px 70px #7549c866;animation:pop .25s ease-out}
+.modal-icon{font-size:46px;margin-bottom:10px}
+.modal-msg{font-size:20px;font-weight:700;line-height:1.4;margin-bottom:20px}
+.modal-bar{height:6px;background:#1a1a29;border-radius:99px;overflow:hidden;margin-bottom:22px}
+.modal-bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#7c5cff,#75e5ff);transform-origin:left}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.info{padding:22px}
+.info h2{margin:0 0 8px;font-size:21px}
+.desc{font-size:13px;margin-bottom:20px}
+button{border:0;border-radius:10px;background:#9270ff;color:white;padding:13px 20px;font-weight:700;cursor:pointer}
+button:hover{background:#a58aff}
+button:disabled{opacity:.6;cursor:wait}
+button.sec{background:#2a2940;padding:8px 14px;font-size:12px}
+button.sec:hover{background:#38365a}
+button.sec:disabled{cursor:not-allowed}
+footer{text-align:center;color:#77768b;padding:30px;font-size:12px}
+
+/* ---- Panel de progreso / log ---- */
+.console{display:none;margin-top:25px;background:#0d0d16;border:1px solid #29283b;border-radius:16px;overflow:hidden}
+.console.show{display:block}
+.c-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid #1f1e2e}
+.c-title{font-weight:700;font-size:14px;letter-spacing:1px}
+.c-title small{color:#77768b;font-weight:400;margin-left:8px}
+.c-actions{display:flex;gap:8px}
+.bar-wrap{padding:16px 18px 6px}
+.bar{height:12px;border-radius:99px;background:#1a1a29;overflow:hidden;position:relative}
+.fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#7c5cff,#75e5ff);transition:width .15s}
+.bar.indet .fill{width:35%!important;animation:slide 1.1s infinite ease-in-out}
+.bar.error .fill{background:#ff5d73}
+.bar.done .fill{background:#4ade80}
+@keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
+.stats{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:#a7a5bb;padding:8px 18px 14px;font-family:Consolas,Menlo,monospace}
+.stats b{color:#f5f3ff}
+.pct{font-size:15px;color:#75e5ff}
+.log{height:260px;overflow:auto;margin:0;padding:12px 18px;background:#08080e;border-top:1px solid #1f1e2e;font:12px/1.65 Consolas,Menlo,monospace}
+.log div{white-space:pre-wrap;word-break:break-word}
+.t{color:#5b5a72}
+.info-l{color:#c9c7e0}
+.ok{color:#4ade80}
+.warn{color:#fbbf24}
+.err{color:#ff5d73;font-weight:bold}
+.data{color:#75e5ff}
+@media(max-width:650px){.games{grid-template-columns:1fr}.hero{padding:28px}.cover{height:160px}}
+</style>
+</head>
+<body>
+<header><div class="logo"><span>▶</span> ARCADE</div><div>Juegos web</div></header>
+<main>
+<section class="hero">
+  <div class="tag">Tu próxima partida</div>
+  <h1>Menos buscar.<br>Más jugar.</h1>
+  <p>Un clic y directo a la acción.</p>
+</section>
+
+<section class="games" id="games"></section>
+
+<section class="console" id="console">
+  <div class="c-head">
+    <div class="c-title">REGISTRO DE CARGA <small id="c-game"></small></div>
+    <div class="c-actions">
+      <button class="sec" id="btn-cancel" disabled>Cancelar</button>
+      <button class="sec" id="btn-copy">Copiar log</button>
+    </div>
+  </div>
+  <div class="bar-wrap"><div class="bar" id="bar"><div class="fill" id="fill"></div></div></div>
+  <div class="stats">
+    <span class="pct" id="s-pct">0%</span>
+    <span>Descargado: <b id="s-bytes">0 B</b> / <b id="s-total">?</b></span>
+    <span>Velocidad: <b id="s-speed">–</b></span>
+    <span>Tiempo: <b id="s-time">0.0s</b></span>
+    <span>Chunks: <b id="s-chunks">0</b></span>
+  </div>
+  <div class="log" id="log"></div>
+</section>
+</main>
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="modal-icon" id="modal-icon">🎮</div>
+    <div class="modal-msg" id="modal-msg"></div>
+    <div class="modal-bar"><i id="modal-fill"></i></div>
+    <button class="sec" id="modal-cancel">Cancelar</button>
+  </div>
+</div>
+<footer>Elige un juego y disfruta de la partida.</footer>
+
+<script>
+/* ==========================================================
+   AÑADIR UN JUEGO: copia un bloque { ... }, pégalo en la lista
+   y cambia sus campos. La tarjeta se crea sola.
+   ----------------------------------------------------------
+   name  : título de la tarjeta
+   desc  : descripción corta
+   icon  : emoji de la portada
+   color : [color1, color2] del degradado de la portada
+   url   : enlace directo al HTML del juego (raw)
+   ========================================================== */
+const GAMES = [
+  {
+    name: "Minecraft",
+    desc: "Juega a minecraft.",
+    icon: "⛏️",
+    color: ["#752a79", "#f06c91"],
+    url: "https://raw.githubusercontent.com/mtxsv/asdf/main/Eaglercraft_1.12.2_u3_WASM_Offline.html"
+  },
+  ,{
+     name: "Minecraft 26.2",
+     desc: "Version mas actualizada de minecraft",
+     icon: "⛏️",
+     color: ["#752a79", "#f06c91"],
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/eaglercraft-26.2-zeus-skins.html"
+   },
+   ,{
+     name: "Linux Kernel 6.1",
+     desc: "En pruebas! Puede que no funcione.",
+     icon: "🐧",
+     color: ["#2c3e50", "#4CAF50"],
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/Linux%206.1(1).html"
+   }
+];
+
+const OPEN_DELAY = 5; // segundos de cuenta atrás antes de abrir
+
+const $ = id => document.getElementById(id);
+const consoleEl = $("console"), logEl = $("log"), bar = $("bar"), fill = $("fill");
+const TIMEOUT_MS = 60000;   // sin recibir datos durante este tiempo => fallo
+
+let t0 = 0, controller = null, running = false;
+
+const fmtBytes = n => {
+  if (n < 1024) return n + " B";
+  if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+  return (n / 1048576).toFixed(2) + " MB";
+};
+const stamp = () => ((performance.now() - t0) / 1000).toFixed(2).padStart(6, " ") + "s";
+
+function log(msg, cls = "info-l") {
+  const row = document.createElement("div");
+  row.innerHTML = '<span class="t">[' + stamp() + ']</span> <span class="' + cls + '"></span>';
+  row.lastChild.textContent = msg;
+  logEl.appendChild(row);
+  logEl.scrollTop = logEl.scrollHeight;
+  (cls === "err" ? console.error : console.log)("[loader]", msg);
+}
+
+function setProgress(loaded, total, speed) {
+  $("s-bytes").textContent = fmtBytes(loaded);
+  $("s-total").textContent = total ? fmtBytes(total) : "desconocido";
+  $("s-time").textContent = ((performance.now() - t0) / 1000).toFixed(1) + "s";
+  if (speed != null) $("s-speed").textContent = fmtBytes(speed) + "/s";
+  if (total) {
+    const p = Math.min(100, loaded / total * 100);
+    bar.classList.remove("indet");
+    fill.style.width = p + "%";
+    $("s-pct").textContent = p.toFixed(1) + "%";
+  } else {
+    bar.classList.add("indet");
+    $("s-pct").textContent = "…";
+  }
+}
+
+function resetUI(gameName) {
+  logEl.innerHTML = "";
+  bar.className = "bar";
+  fill.style.width = "0";
+  $("s-pct").textContent = "0%";
+  $("s-bytes").textContent = "0 B";
+  $("s-total").textContent = "?";
+  $("s-speed").textContent = "–";
+  $("s-time").textContent = "0.0s";
+  $("s-chunks").textContent = "0";
+  $("c-game").textContent = "· " + gameName;
+  consoleEl.classList.add("show");
+  consoleEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function countdown(game, secs) {
+  const msg = $("modal-msg"), mfill = $("modal-fill");
+  $("modal-icon").textContent = game.icon || "🎮";
+  mfill.style.transition = "none";
+  mfill.style.transform = "scaleX(1)";
+  $("modal").classList.add("show");
+  void mfill.offsetWidth; // reinicia la animación
+  mfill.style.transition = "transform " + secs + "s linear";
+  mfill.style.transform = "scaleX(0)";
+  for (let s = secs; s > 0; s--) {
+    msg.textContent = game.name + " se abrirá en " + s + " segundo" + (s === 1 ? "" : "s") + "...";
+    log("Abriendo en " + s + "...", "warn");
+    await new Promise(r => setTimeout(r, 1000));
+    if (controller.signal.aborted) throw new Error("Cancelado");
+  }
+  msg.textContent = "Abriendo " + game.name + "...";
+}
+
+function renderGames() {
+  const box = $("games");
+  GAMES.forEach(game => {
+    const card = document.createElement("article");
+    card.className = "card";
+
+    const cover = document.createElement("div");
+    cover.className = "cover";
+    cover.style.background = "linear-gradient(135deg," + (game.color || ["#2a2940", "#3a3158"]).join(",") + ")";
+    cover.textContent = game.icon || "🎮";
+
+    const info = document.createElement("div");
+    info.className = "info";
+    const h2 = document.createElement("h2");
+    h2.textContent = game.name;
+    const desc = document.createElement("div");
+    desc.className = "desc";
+    desc.textContent = game.desc || "";
+    const button = document.createElement("button");
+    button.textContent = "▶ Jugar ahora";
+    button.addEventListener("click", () => loadGame(button, game));
+
+    info.append(h2, desc, button);
+    card.append(cover, info);
+    box.appendChild(card);
+  });
+}
+
+function fail(button, message, detail) {
+  $("modal").classList.remove("show");
+  bar.classList.remove("indet");
+  bar.classList.add("error");
+  log("✖ ERROR: " + message, "err");
+  if (detail) log(detail, "warn");
+  log("Pulsa «Jugar ahora» para reintentar.", "info-l");
+  button.disabled = false;
+  $("btn-cancel").disabled = true;
+  running = false;
+}
+
+async function loadGame(button, game) {
+  if (running) return;
+  running = true;
+  t0 = performance.now();
+  controller = new AbortController();
+  button.disabled = true;
+  $("btn-cancel").disabled = false;
+  resetUI(game.name);
+
+  log("Iniciando carga de «" + game.name + "»");
+  log("URL: " + game.url, "data");
+
+  let idleTimer;
+  const armTimer = () => {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => controller.abort("timeout"), TIMEOUT_MS);
+  };
+
+  try {
+    log("Enviando petición fetch()...");
+    armTimer();
+    const response = await fetch(game.url, { signal: controller.signal, cache: "no-store" });
+    log("Respuesta recibida: HTTP " + response.status + " " + response.statusText,
+        response.ok ? "ok" : "err");
+    if (!response.ok) throw new Error("HTTP " + response.status + " " + response.statusText);
+
+    const ctype = response.headers.get("content-type");
+    const clen = parseInt(response.headers.get("content-length"), 10);
+    const cenc = response.headers.get("content-encoding");
+    if (ctype) log("Content-Type: " + ctype, "data");
+    if (cenc) log("Content-Encoding: " + cenc + " (el tamaño total puede no ser exacto)", "warn");
+    const total = !isNaN(clen) && clen > 0 ? clen : 0;
+    if (total) log("Tamaño total anunciado: " + fmtBytes(total), "data");
+    else log("El servidor no informa del tamaño total: porcentaje no disponible hasta terminar.", "warn");
+
+    if (!response.body || !response.body.getReader)
+      throw new Error("Este navegador no permite leer la respuesta en streaming");
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let html = "", loaded = 0, chunks = 0;
+    let lastLogPct = -1, lastLogTime = 0, lastSpeedT = performance.now(), lastSpeedB = 0, speed = 0;
+
+    log("Escribiendo HTML en memoria...");
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      armTimer();
+
+      chunks++;
+      loaded += value.byteLength;
+      html += decoder.decode(value, { stream: true });
+
+      const now = performance.now();
+      if (now - lastSpeedT >= 400) {
+        speed = (loaded - lastSpeedB) / ((now - lastSpeedT) / 1000);
+        lastSpeedT = now; lastSpeedB = loaded;
+      }
+      $("s-chunks").textContent = chunks;
+      setProgress(loaded, total, speed);
+
+      // Log con throttling: cada 5% (o cada 500 ms si no hay total)
+      if (total) {
+        const p = Math.floor(loaded / total * 100 / 5) * 5;
+        if (p > lastLogPct) {
+          lastLogPct = p;
+          log("Memoria: " + String(Math.min(p, 100)).padStart(3) + "%  ·  " +
+              fmtBytes(loaded) + " / " + fmtBytes(total) + "  ·  " + chunks + " chunks", "data");
+        }
+      } else if (now - lastLogTime > 500) {
+        lastLogTime = now;
+        log("Memoria: " + fmtBytes(loaded) + "  ·  " + chunks + " chunks", "data");
+      }
+    }
+    clearTimeout(idleTimer);
+    html += decoder.decode(); // vaciar el decodificador
+
+    // Ajuste final a 100 %
+    const finalTotal = total || loaded;
+    $("s-total").textContent = fmtBytes(finalTotal);
+    bar.classList.remove("indet");
+    fill.style.width = "100%";
+    $("s-pct").textContent = "100%";
+    bar.classList.add("done");
+    log("✔ Descarga completa: " + fmtBytes(loaded) + " en " + chunks + " chunks (" +
+        html.length.toLocaleString("es-ES") + " caracteres)", "ok");
+
+    // Validaciones
+    log("Validando contenido...");
+    if (loaded === 0 || !html.trim()) throw new Error("El archivo descargado está vacío");
+    if (total && loaded !== total && !cenc)
+      log("Aviso: bytes recibidos (" + loaded + ") ≠ anunciados (" + total + ")", "warn");
+    if (!/<html|<!doctype|<script|<body/i.test(html))
+      throw new Error("El contenido no parece HTML válido (¿URL errónea o página de error?)");
+    log("✔ Contenido válido (HTML detectado)", "ok");
+
+    log("HTML listo en memoria. Cuenta atrás para abrir el juego...", "ok");
+    $("btn-cancel").disabled = true;
+    await countdown(game, OPEN_DELAY);
+    log("Lanzando juego: document.open() → write() → close()", "ok");
+
+    document.open();
+    document.write(html);
+    document.close();
+  } catch (error) {
+    clearTimeout(idleTimer);
+    const reason = controller.signal.reason;
+    if (error.name === "AbortError" || reason) {
+      if (reason === "timeout")
+        fail(button, "Tiempo agotado: sin datos durante " + TIMEOUT_MS / 1000 + " s");
+      else
+        fail(button, "Descarga cancelada por el usuario");
+    } else if (error instanceof TypeError) {
+      fail(button, "Fallo de red o bloqueo CORS: " + error.message,
+           "Comprueba la URL, tu conexión, y que el servidor permita CORS.");
+    } else {
+      fail(button, error.message);
+    }
+  }
+}
+
+renderGames();
+
+$("btn-cancel").addEventListener("click", () => {
+  if (controller) controller.abort("user");
+});
+$("modal-cancel").addEventListener("click", () => {
+  if (controller) controller.abort("user");
+});
+
+$("btn-copy").addEventListener("click", async e => {
+  const text = [...logEl.children].map(r => r.textContent).join("\n");
+  const btn = e.currentTarget;
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = "¡Copiado!";
+  } catch {
+    btn.textContent = "No se pudo copiar";
+  }
+  setTimeout(() => btn.textContent = "Copiar log", 1500);
+});
+</script>
+</body>
+</html>
