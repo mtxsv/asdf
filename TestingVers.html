@@ -68,12 +68,10 @@ footer{text-align:center;color:#77768b;padding:30px;font-size:12px}
 </style>
 </head>
 <body>
-<header><div class="logo"><span>▶</span> ARCADE</div><div>Juegos web</div></header>
+<header><div class="logo"><span>▶</span> MetaXSV</div><div>Juegos y mas</div></header>
 <main>
 <section class="hero">
-  <div class="tag">Tu próxima partida</div>
-  <h1>Menos buscar.<br>Más jugar.</h1>
-  <p>Un clic y directo a la acción.</p>
+  <div class="tag">Version 1.0</div>
 </section>
 
 <section class="games" id="games"></section>
@@ -112,11 +110,12 @@ footer{text-align:center;color:#77768b;padding:30px;font-size:12px}
    AÑADIR UN JUEGO: copia un bloque { ... }, pégalo en la lista
    y cambia sus campos. La tarjeta se crea sola.
    ----------------------------------------------------------
-   name  : título de la tarjeta
-   desc  : descripción corta
-   icon  : emoji de la portada
-   color : [color1, color2] del degradado de la portada
-   url   : enlace directo al HTML del juego (raw)
+   name     : título de la tarjeta
+   desc     : descripción corta
+   icon     : emoji de la portada
+   color    : [color1, color2] del degradado de la portada
+   url      : enlace directo al HTML del juego (raw)
+   nomarcado: true (opcional) -> muestra alerta de no probado
    ========================================================== */
 const GAMES = [
   {
@@ -126,23 +125,66 @@ const GAMES = [
     color: ["#752a79", "#f06c91"],
     url: "https://raw.githubusercontent.com/mtxsv/asdf/main/Eaglercraft_1.12.2_u3_WASM_Offline.html"
   },
-  ,{
+  {
      name: "Minecraft 26.2",
      desc: "Version mas actualizada de minecraft",
      icon: "⛏️",
      color: ["#752a79", "#f06c91"],
      url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/eaglercraft-26.2-zeus-skins.html"
-   },
-   ,{
+  },
+  {
      name: "Linux Kernel 6.1",
-     desc: "En pruebas! Puede que no funcione.",
+     desc: "En pruebas! Puede que no funcione correctamente",
      icon: "🐧",
      color: ["#2c3e50", "#4CAF50"],
-     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/Linux%206.1(1).html"
-   }
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/Linux%206.1(1).html",
+  },
+  {
+     name: "DOOM",
+     desc: "Juego de disparos en primera persona",
+     icon: "🔫",
+     color: ["#ff0000", "#000000"], 
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/doom.html"
+  },
+  {
+     name: "Undertale",
+     desc: "Juego de rol con combates por turnos y una historia emotiva",
+     icon: "❤️",
+     color: ["#ff0000", "#ff0000"],
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/NXTALE/index.html"
+  },
+  {
+     name: "Plants vs Zombies",
+     desc: "Juego de estrategia y defensa de torres",
+     icon: "🌱",
+     color: ["#4CAF50", "#8BC34A"],
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/PVZ/index.html"
+  },
+  {
+     name: "Cuphead",
+     desc: "Juego de plataformas y disparos con estilo de animación de los años 30",
+     icon: "☕",
+     color: ["#ff0000", "#ff9900"],
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/cuphead-main/index.html"
+  },
+  {
+     name: "Gorilla Tag",
+     desc: "Juego multijugador de realidad virtual (adaptado a web)...",
+     icon: "🦍",
+     color: ["#8B4513", "#A0522D"],
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/gorilla-tag-main/index.html"
+     nomarcado: true // <--- Ejemplo de juego con la opción nomarcado
+  },
+  {
+     name: "Granny",
+     desc: "Juego de terror y supervivencia...",
+     icon: "👵",
+     color: ["#8B0000", "#FF4500"],
+     url: "https://raw.githubusercontent.com/mtxsv/asdf/refs/heads/main/granny-main/index.html"
+  } 
 ];
 
-const OPEN_DELAY = 5; // segundos de cuenta atrás antes de abrir
+const OPEN_DELAY = 0; // segundos de cuenta atrás antes de abrir
 
 const $ = id => document.getElementById(id);
 const consoleEl = $("console"), logEl = $("log"), bar = $("bar"), fill = $("fill");
@@ -235,7 +277,14 @@ function renderGames() {
     desc.textContent = game.desc || "";
     const button = document.createElement("button");
     button.textContent = "▶ Jugar ahora";
-    button.addEventListener("click", () => loadGame(button, game));
+    button.addEventListener("click", () => {
+      // Verificamos si el juego está marcado con la opción NOMARCADO
+      if (game.nomarcado) {
+        const confirmar = window.confirm("Este juego no ha sido probado. Proceder?");
+        if (!confirmar) return; // Si el usuario cancela, no continúa
+      }
+      loadGame(button, game);
+    });
 
     info.append(h2, desc, button);
     card.append(cover, info);
@@ -357,9 +406,14 @@ async function loadGame(button, game) {
     await countdown(game, OPEN_DELAY);
     log("Lanzando juego: document.open() → write() → close()", "ok");
 
-    document.open();
-    document.write(html);
-    document.close();
+    const frame = document.createElement("iframe");
+    frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;background:#000;z-index:9999";
+    frame.allow = "fullscreen; autoplay; gamepad; clipboard-read; clipboard-write; microphone; camera";
+    frame.allowFullscreen = true;
+    frame.srcdoc = html;
+    document.body.style.overflow = "hidden";
+    document.body.appendChild(frame);
+    $("modal").classList.remove("show");
   } catch (error) {
     clearTimeout(idleTimer);
     const reason = controller.signal.reason;
